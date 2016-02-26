@@ -5,9 +5,23 @@ echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="brcmfmac", NAME="wlan0"' >> /et
 
 #
 # force the usb wifi interface to wlan1
-# TODO edit the DRIVERS=="*" to match the driver for your usb wifi interface 
 #
-echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="rtl8192cu", NAME="wlan1"' >> /etc/udev/rules.d/72-static-name.rules
+foundwlan0=`grep "wlan0:" /proc/net/dev`
+if  [ -n "$foundwlan0" ]
+then
+  driver=$(udevadm info /sys/class/net/wlan0 | grep 'E: ID_NET_DRIVER=' | sed -r 's/E: ID_NET_DRIVER=//')
+  if [ "$driver" != "brcmfmac" ]
+  then
+    echo "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"$driver\", NAME=\"wlan1\"" >> /etc/udev/rules.d/72-static-name.rules
+  fi
+fi
+foundwlan1=`grep "wlan1:" /proc/net/dev`
+if  [ -n "$foundwlan1" ] ; then
+  driver=$(udevadm info /sys/class/net/wlan1 | grep 'E: ID_NET_DRIVER=' | sed -r 's/E: ID_NET_DRIVER=//')
+  if [ "$driver" != "brcmfmac" ]; then
+    echo "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"$driver\", NAME=\"wlan1\"" >> /etc/udev/rules.d/72-static-name.rules
+  fi
+fi
 
 #
 # modify the /etc/network/interfaces file to configure the wlan1 interface
@@ -41,17 +55,36 @@ sed -i '/isc-dhcp-server start/ a\ \tiptables-restore < /etc/iptables.ipv4.nat' 
 
 #
 # modify wpa supplicant
-# TODO modify the ssid and psk to match your network
-#
-cat << EOF >> /etc/wpa_supplicant/wpa_supplicant.conf
-network={
-	ssid="HomeWifiSSID"
-	psk="password"
-}
+IFS=$'\n'
+ssids=($(iw dev wlan0 scan | grep SSID | sed -r 's/[[:space:]]SSID: //'))
+ssids+=("NONE")
 
-network={
-	ssid="PortableHotspotSSID"
-	psk="password"
-}
-EOF
+ssid=""
+
+while [ "$ssid" != "NONE" ]
+do
+  echo "Choose a wifi network to join (or choose NONE to exit):"
+  select ssid in "${ssids[@]}"; do
+    if [ "$ssid" != "NONE" ]
+    then
+      echo "Enter password for $ssid:"
+      read -s password
+      echo  "network={"  >> /etc/wpa_supplicant/wpa_supplicant.conf
+      echo  "  ssid=\"$ssid\""  >> /etc/wpa_supplicant/wpa_supplicant.conf
+      echo  "  psk=\"$password\""  >> /etc/wpa_supplicant/wpa_supplicant.conf
+      echo  "}"  >> /etc/wpa_supplicant/wpa_supplicant.conf
+    fi
+    break
+  done
+done
+
+
+
+
+
+
+
+
+
+
 
