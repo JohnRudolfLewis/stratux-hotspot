@@ -1,13 +1,13 @@
 #
 # force the built in wifi to wlan0
 #
-echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="brcmfmac", NAME="wlan0"' >> /etc/network/interfaces
+echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="brcmfmac", NAME="wlan0"' >> /etc/udev/rules.d/72-static-name.rules
 
 #
 # force the usb wifi interface to wlan1
 # TODO edit the DRIVERS=="*" to match the driver for your usb wifi interface 
 #
-echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="rtl8192cu", NAME="wlan1"' >> /etc/network/interfaces
+echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="rtl8192cu", NAME="wlan1"' >> /etc/udev/rules.d/72-static-name.rules
 
 #
 # modify the /etc/network/interfaces file to configure the wlan1 interface
@@ -29,15 +29,14 @@ echo 1 > /proc/sys/net/ipv4/ip_forward
 #
 # configure iptables
 #
-iptables –t nat –A POSTROUTING –o wlan1 –j MASQUERADE
-iptables –A FORWARD –i wlan1 –o wlan0 –m state --state RELATED,ESTABLISHED –j ACCEPT
-iptables –A FORWARD –i wlan0 –o wlan1 –j ACCEPT
+iptables -t nat -A POSTROUTING -o wlan1 -j MASQUERADE
+iptables -A FORWARD -i wlan1 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i wlan0 -o wlan1 -j ACCEPT
 iptables-save > /etc/iptables.ipv4.nat
 
 #
 # modify stratux wifi script
 #
-sed '/CLIENTSCRIPT="foo"/a CLIENTSCRIPT2="hello"' file
 sed -i '/isc-dhcp-server start/ a\ \tiptables-restore < /etc/iptables.ipv4.nat' /usr/sbin/stratux-wifi.sh
 
 #
@@ -54,4 +53,5 @@ network={
 	ssid="PortableHotspotSSID"
 	psk="password"
 }
-EOF 
+EOF
+
