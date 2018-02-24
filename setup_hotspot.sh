@@ -53,30 +53,6 @@ iptables-save > /etc/iptables.ipv4.nat
 #
 sed -i '/isc-dhcp-server start/ a\ \tiptables-restore < /etc/iptables.ipv4.nat' /usr/sbin/stratux-wifi.sh
 
-#
-# modify wpa supplicant
-IFS=$'\n'
-ssids=($(iw dev wlan0 scan | grep SSID | sed -r 's/[[:space:]]SSID: //'))
-ssids+=("NONE")
-
-ssid=""
-
-while [ "$ssid" != "NONE" ]
-do
-  echo "Choose a wifi network to join (or choose NONE to exit):"
-  select ssid in "${ssids[@]}"; do
-    if [ "$ssid" != "NONE" ]
-    then
-      echo "Enter password for $ssid:"
-      read -s password
-      echo  "network={"  >> /etc/wpa_supplicant/wpa_supplicant.conf
-      echo  "  ssid=\"$ssid\""  >> /etc/wpa_supplicant/wpa_supplicant.conf
-      echo  "  psk=\"$password\""  >> /etc/wpa_supplicant/wpa_supplicant.conf
-      echo  "}"  >> /etc/wpa_supplicant/wpa_supplicant.conf
-    fi
-    break
-  done
-done
 
 
 
